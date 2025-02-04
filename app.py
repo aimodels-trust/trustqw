@@ -27,10 +27,10 @@ domain = st.sidebar.selectbox("Select Domain", ["Finance", "Healthcare", "Custom
 @st.cache_data
 def load_data(domain):
     if domain == "Finance":
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls"
-    data = pd.read_excel(url, skiprows=1, engine="xlrd")  # Use xlrd for .xls files
-    return data
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls"
+        data = pd.read_excel(url, skiprows=1, engine="xlrd")  # Use xlrd for .xls files
         return data
+        
     elif domain == "Healthcare":
         # Load Heart Disease UCI Dataset
         url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
@@ -38,9 +38,9 @@ def load_data(domain):
         data = pd.read_csv(url, names=columns, na_values="?")
         return data
     if domain == "Customer Service":
-    url = "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Electronics_5.json.gz"
-    data = pd.read_json(url, lines=True)
-    return data
+        url = "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Electronics_5.json.gz"
+        data = pd.read_json(url, lines=True)
+        return data
 
 # Train a Simple Model
 if target_column not in data.columns:
