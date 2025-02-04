@@ -8,3 +8,4 @@ matplotlib
 seaborn
 openpyxl  # For .xlsx files
 xlrd>=2.0.1  # For .xls files
+python-3.10
