@@ -27,9 +27,9 @@ domain = st.sidebar.selectbox("Select Domain", ["Finance", "Healthcare", "Custom
 @st.cache_data
 def load_data(domain):
     if domain == "Finance":
-        # Load UCI Credit Card Default Dataset
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls"
-        data = pd.read_excel(url, skiprows=1)
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls"
+    data = pd.read_excel(url, skiprows=1, engine="xlrd")  # Use xlrd for .xls files
+    return data
         return data
     elif domain == "Healthcare":
         # Load Heart Disease UCI Dataset
@@ -37,13 +37,17 @@ def load_data(domain):
         columns = ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal", "target"]
         data = pd.read_csv(url, names=columns, na_values="?")
         return data
-    elif domain == "Customer Service":
-        # Load Amazon Customer Reviews Dataset
-        url = "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Electronics_5.json.gz"
-        data = pd.read_json(url, lines=True)
-        return data
+    if domain == "Customer Service":
+    url = "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Electronics_5.json.gz"
+    data = pd.read_json(url, lines=True)
+    return data
 
 # Train a Simple Model
+if target_column not in data.columns:
+    st.error(f"Target column '{target_column}' not found in the dataset.")
+    return
+data = data.dropna()  # Drop rows with missing values
+feature_names = X_train.columns.tolist()
 def train_model(data, target_column):
     X = data.drop(columns=[target_column])
     y = data[target_column]
