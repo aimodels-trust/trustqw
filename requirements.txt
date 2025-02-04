@@ -6,3 +6,5 @@ shap
 lime
 matplotlib
 seaborn
+openpyxl  # If using Option 2
+xlrd>=2.0.1  # If using Option 1
