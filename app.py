@@ -5,27 +5,20 @@ import joblib
 import gdown
 import os
 
-# Google Drive file ID (Extracted from your link)
+# Google Drive file ID for credit card model
 file_id = "1e3K7NAowcpfxWc7sfqpk3YHVeyzEDl4J"
 model_filename = "credit_default_model.pkl"
 
-# Check if file exists, otherwise download it
+# Check if the model file exists, otherwise download it
 if not os.path.exists(model_filename):
     url = f"https://drive.google.com/uc?id={file_id}"
     gdown.download(url, model_filename, quiet=False)
 
-# Load the trained model and scaler
+# Load the trained model
 model = joblib.load(model_filename)
 
-# Assuming the scaler is also in Google Drive, replace the file ID accordingly
-scaler_file_id = "YOUR_SCALER_FILE_ID"  # Replace with actual file ID
-scaler_filename = "scaler.pkl"
-
-if not os.path.exists(scaler_filename):
-    scaler_url = f"https://drive.google.com/uc?id={scaler_file_id}"
-    gdown.download(scaler_url, scaler_filename, quiet=False)
-
-scaler = joblib.load(scaler_filename)
+# Load the scaler (already available)
+scaler = joblib.load("scaler.pkl")
 
 # Define the Streamlit app
 st.title("Credit Card Default Prediction")
