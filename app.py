@@ -1,145 +1,49 @@
-# -*- coding: utf-8 -*-
-"""app.py"""
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-import shap
-import lime
-import lime.lime_tabular
-import matplotlib.pyplot as plt
+import joblib
 
-# Title of the App
-st.title("Trust & Transparency in Business Systems Using XAI")
+# Load the trained model and scaler
+model = joblib.load("credit_default_model.pkl")
+scaler = joblib.load("scaler.pkl")
 
-# Sidebar for Domain Selection
-domain = st.sidebar.selectbox("Select Domain", ["Finance", "Healthcare", "Customer Service"])
+# Define the Streamlit app
+st.title("Credit Card Default Prediction")
 
-# Load Datasets
-@st.cache_data
-def load_data(domain):
-    if domain == "Finance":
-        # Load UCI Credit Card Default Dataset
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls"
-        data = pd.read_excel(url, skiprows=1, engine="xlrd")  # Use xlrd for .xls files
-        return data
+# Input fields
+limit_bal = st.number_input("Credit Limit (LIMIT_BAL)", min_value=0, value=50000)
+sex = st.selectbox("Sex", ["Male", "Female"])
+education = st.selectbox("Education", ["Graduate School", "University", "High School", "Others"])
+marriage = st.selectbox("Marriage", ["Married", "Single", "Others"])
+age = st.number_input("Age", min_value=18, max_value=100, value=30)
+pay_status = st.slider("Payment Status (Months Delayed)", min_value=-2, max_value=8, value=0)
+bill_amount = st.number_input("Average Bill Amount", min_value=0, value=50000)
+pay_amount = st.number_input("Average Payment Amount", min_value=0, value=10000)
 
-    elif domain == "Healthcare":
-        # Load Heart Disease UCI Dataset
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
-        columns = [
-            "age", "sex", "cp", "trestbps", "chol", "fbs", "restecg",
-            "thalach", "exang", "oldpeak", "slope", "ca", "thal", "target"
-        ]
-        data = pd.read_csv(url, names=columns, na_values="?")
-        return data
+# Preprocess input data
+input_data = pd.DataFrame({
+    "LIMIT_BAL": [limit_bal],
+    "SEX": [1 if sex == "Male" else 2],
+    "EDUCATION": [1 if education == "Graduate School" else 2 if education == "University" else 3 if education == "High School" else 4],
+    "MARRIAGE": [1 if marriage == "Married" else 2 if marriage == "Single" else 3],
+    "AGE": [age],
+    "PAY_0": [pay_status],
+    "avg_bill_amt": [bill_amount],
+    "avg_pay_amt": [pay_amount],
+    "bill_payment_diff": [bill_amount - pay_amount],
+    "credit_utilization": [bill_amount / limit_bal]
+})
 
-    elif domain == "Customer Service":
-        # Load Amazon Customer Reviews Dataset
-        url = "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Electronics_5.json.gz"
-        data = pd.read_json(url, lines=True)
-        return data
+# Scale numerical features
+numerical_cols = ["LIMIT_BAL", "avg_bill_amt", "avg_pay_amt", "bill_payment_diff", "credit_utilization"]
+input_data[numerical_cols] = scaler.transform(input_data[numerical_cols])
 
-# Train a Simple Model
-def train_model(data, target_column):
-    if target_column not in data.columns:
-        st.error(f"Target column '{target_column}' not found in the dataset.")
-        return None, None, None, None, None
+# Make predictions
+prediction = model.predict(input_data)[0]
+probability = model.predict_proba(input_data)[0][1]
 
-    # Drop rows with missing values
-    data = data.dropna()
-
-    # Split dataset
-    X = data.drop(columns=[target_column])
-    y = data[target_column]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train model
-    model = RandomForestClassifier(random_state=42)
-    model.fit(X_train, y_train)
-    return model, X_train, X_test, y_train, y_test
-
-# Generate SHAP Explanations
-def generate_shap_explanation(model, X_train, X_test):
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_test)
-    return explainer, shap_values
-
-# Generate LIME Explanations
-def generate_lime_explanation(model, X_train, X_test, feature_names):
-    explainer = lime.lime_tabular.LimeTabularExplainer(
-        np.array(X_train), feature_names=feature_names, class_names=["Class 0", "Class 1"], verbose=True, mode="classification"
-    )
-    explanation = explainer.explain_instance(np.array(X_test.iloc[0]), model.predict_proba, num_features=len(feature_names))
-    return explanation
-
-# Main Application Logic
-if domain == "Finance":
-    st.header("Finance: Credit Scoring and Fraud Detection")
-    data = load_data("Finance")
-    st.write("Dataset Preview:")
-    st.dataframe(data.head())
-
-    # Train Model
-    target_column = "default payment next month"
-    model, X_train, X_test, y_train, y_test = train_model(data, target_column)
-
-    if model is not None:
-        # SHAP Explanation
-        st.subheader("SHAP Explanation")
-        explainer, shap_values = generate_shap_explanation(model, X_train, X_test)
-        st.pyplot(shap.summary_plot(shap_values[1], X_test))  # Use shap_values[1] for binary classification
-
-        # LIME Explanation
-        st.subheader("LIME Explanation")
-        feature_names = X_train.columns.tolist()
-        lime_explanation = generate_lime_explanation(model, X_train, X_test, feature_names)
-        st.pyplot(lime_explanation.as_pyplot_figure())
-
-elif domain == "Healthcare":
-    st.header("Healthcare: Disease Prediction")
-    data = load_data("Healthcare")
-    st.write("Dataset Preview:")
-    st.dataframe(data.head())
-
-    # Train Model
-    target_column = "target"
-    model, X_train, X_test, y_train, y_test = train_model(data, target_column)
-
-    if model is not None:
-        # SHAP Explanation
-        st.subheader("SHAP Explanation")
-        explainer, shap_values = generate_shap_explanation(model, X_train, X_test)
-        st.pyplot(shap.summary_plot(shap_values[1], X_test))  # Use shap_values[1] for binary classification
-
-        # LIME Explanation
-        st.subheader("LIME Explanation")
-        feature_names = X_train.columns.tolist()
-        lime_explanation = generate_lime_explanation(model, X_train, X_test, feature_names)
-        st.pyplot(lime_explanation.as_pyplot_figure())
-
-elif domain == "Customer Service":
-    st.header("Customer Service: Sentiment Analysis")
-    data = load_data("Customer Service")
-    st.write("Dataset Preview:")
-    st.dataframe(data.head())
-
-    # Preprocess Data (Example: Sentiment Analysis)
-    data["sentiment"] = data["overall"].apply(lambda x: "Positive" if x > 3 else "Negative")
-    target_column = "sentiment"
-
-    # Train Model
-    model, X_train, X_test, y_train, y_test = train_model(data, target_column)
-
-    if model is not None:
-        # SHAP Explanation
-        st.subheader("SHAP Explanation")
-        explainer, shap_values = generate_shap_explanation(model, X_train, X_test)
-        st.pyplot(shap.summary_plot(shap_values[1], X_test))  # Use shap_values[1] for binary classification
-
-        # LIME Explanation
-        st.subheader("LIME Explanation")
-        feature_names = X_train.columns.tolist()
-        lime_explanation = generate_lime_explanation(model, X_train, X_test, feature_names)
-        st.pyplot(lime_explanation.as_pyplot_figure())
+# Display results
+if prediction == 1:
+    st.error(f"High Probability of Default: {probability:.2%}")
+else:
+    st.success(f"Low Probability of Default: {probability:.2%}")
